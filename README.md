@@ -251,6 +251,50 @@ Expected behavior:
 - Reject missing active effective-dated records for the requested `asOfDate`.
 - Fail fast on config issues: empty effective-dated arrays, `effectiveTo < effectiveFrom`, and overlapping active records.
 
+## Discussion 1
+
+Ambiguities, edge cases, and missing rules I would clarify with business before implementation:
+
+1. **Co-funding deduction policy boundaries**
+   - Can net grant become negative (for example gross grant `3000` with co-funding `5000`), or should result be floored at `0`, carried forward, or booked as payable/recovery?
+   - Also confirm whether deduction is always quarter-level and whether scheme-specific caps/floors apply.
+
+2. **Partial-quarter licence handling**
+   - If licence is active for only part of a quarter, should we reject, pro-rate, or allow with exception workflow? as this open ended used a boolean flag to indicate if the licence is active for the entire quarter in request payload (licenceActiveFullQuarter).
+
+3. **Staff employed for only part of the quarter**
+   - The specification says salary × 3 months, but should someone who joins mid-quarter, resigns during the quarter, or takes unpaid leave be prorated, counted only if full-quarter employed, or computed from payroll snapshots?
+   - This materially changes grant amounts and must be fixed as a policy rule. 
+
+4. **Rounding and cent-allocation policy**
+   - When should rounding occur?
+   - after each calculation?
+   - only at the final amount?
+   - funding split rounded independently?
+   
+   Otherwise different systems may produce different totals.
+
+5. **Audit correction lifecycle**
+   - Can historical computations be superseded, or must they remain immutable with a linked correction trail?
+
+## Discussion 2
+
+To support Jan revisions and reliable re-runs of past quarters, the system should use effective-dated, append-only rule records.
+
+Recommended approach:
+
+- Keep `salarySchedules` and `fundingSplits` as versioned records with `effectiveFrom` and `effectiveTo`.
+- Never overwrite old records; append new records and close prior ranges when policy changes.
+- Resolve active records using `rateResolution.asOfDate`, with fallback to `quarter.startDate`.
+- Apply deterministic matching: `effectiveFrom <= asOfDate <= effectiveTo` (or open-ended when `effectiveTo: null`).
+- Reject ambiguity (overlap) and missing coverage as configuration errors.
+
+Example (appeal in Feb 2027 for Q3 2026):
+
+- Request includes `quarter.startDate = 2026-07-01` and `rateResolution.asOfDate = 2026-07-01`.
+- Engine resolves 2026 rule records, not revised 2027 records.
+- Audit output stores resolved effective dates and `asOfDate` for reproducibility and traceability.
+
 ## AI usage and my corrections
 
 1. **Project bootstrap**

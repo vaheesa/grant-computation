@@ -143,9 +143,52 @@ class ComputationService {
       throw Object.assign(new Error("centre.roles must be an array"), { statusCode: 400 });
     }
 
-    const invalidRole = request.centre.roles.find((role) => !role.name || Number(role.count) < 0);
+    if (!request.centre.type || typeof request.centre.type !== "string") {
+      throw Object.assign(new Error("centre.type is required"), { statusCode: 400 });
+    }
+
+    const caseload = Number(request.centre.caseload);
+    if (!Number.isFinite(caseload) || caseload < 0) {
+      throw Object.assign(new Error("centre.caseload must be a non-negative number"), {
+        statusCode: 400
+      });
+    }
+
+    if (request.centre.coFunding !== undefined) {
+      const coFunding = Number(request.centre.coFunding);
+      if (!Number.isFinite(coFunding) || coFunding < 0) {
+        throw Object.assign(new Error("centre.coFunding must be a non-negative number"), {
+          statusCode: 400
+        });
+      }
+    }
+
+    const invalidRole = request.centre.roles.find((role) => {
+      if (!role || typeof role !== "object") {
+        return true;
+      }
+
+      if (!role.name || typeof role.name !== "string" || !role.name.trim()) {
+        return true;
+      }
+
+      const count = Number(role.count);
+      if (!Number.isFinite(count) || count < 0) {
+        return true;
+      }
+
+      if (role.qualifiedCount !== undefined) {
+        const qualifiedCount = Number(role.qualifiedCount);
+        if (!Number.isFinite(qualifiedCount) || qualifiedCount < 0) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+
     if (invalidRole) {
-      throw Object.assign(new Error("Each role must include a name and non-negative count"), {
+      throw Object.assign(new Error("Each role must include a non-empty name and non-negative numeric counts"), {
         statusCode: 400
       });
     }

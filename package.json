@@ -1,0 +1,21 @@
+{
+  "name": "grant-computation-service",
+  "version": "1.0.0",
+  "description": "Configuration-driven grant computation service",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node --watch app.js"
+  },
+  "keywords": [
+    "grant",
+    "computation",
+    "audit",
+    "rules-engine"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
